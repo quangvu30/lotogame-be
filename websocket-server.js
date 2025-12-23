@@ -58,6 +58,15 @@ app.ws("/*", {
     clients.set(id, ws);
 
     console.log(`Client ${ws.clientName} (${id}) connected`);
+    app.publish(
+      TOPIC_ADMIN,
+      JSON.stringify({
+        type: "user_connected",
+        clientId: id,
+        clientName: ws.clientName,
+        timestamp: new Date(),
+      })
+    );
 
     if (ws.id === ADMIN_ID) {
       ws.subscribe(TOPIC_ADMIN);
@@ -92,34 +101,21 @@ app.ws("/*", {
         })
       );
     }
-    ws.publish(
-      TOPIC_ADMIN,
-      JSON.stringify({
-        type: "user_connected",
-        clientId: id,
-        clientName: ws.clientName,
-        timestamp: new Date(),
-      })
-    );
   },
 
   message: (ws, message, isBinary) => {
     try {
       const data = Buffer.from(message).toString();
-      console.log("Received message:", data);
-
       const parsedData = JSON.parse(data);
-      console.log("Parsed data:", parsedData);
       switch (parsedData.type) {
         case "ping":
           ws.send("pong");
           break;
-        case "choose_number":
-          ws.publish(
+        case "reset":
+          app.publish(
             TOPIC_USERS,
             JSON.stringify({
-              type: "number_chosen",
-              data: parsedData.data,
+              type: "reset",
             })
           );
           break;
@@ -140,6 +136,15 @@ app.ws("/*", {
   },
 
   close: (ws, code, message) => {
+    app.publish(
+      TOPIC_ADMIN,
+      JSON.stringify({
+        type: "user_disconnected",
+        clientId: ws.id,
+        clientName: ws.clientName,
+        timestamp: new Date(),
+      })
+    );
     console.log("WebSocket closed with code:", code);
     clients.delete(ws.id);
   },
