@@ -58,15 +58,16 @@ app.ws("/*", {
     clients.set(id, ws);
 
     console.log(`Client ${ws.clientName} (${id}) connected`);
-    app.publish(
-      TOPIC_ADMIN,
-      JSON.stringify({
-        type: "user_connected",
-        clientId: id,
-        clientName: ws.clientName,
-        timestamp: new Date(),
-      })
-    );
+    id !== ADMIN_ID &&
+      app.publish(
+        TOPIC_ADMIN,
+        JSON.stringify({
+          type: "user_connected",
+          clientId: id,
+          clientName: ws.clientName,
+          timestamp: new Date(),
+        })
+      );
 
     if (ws.id === ADMIN_ID) {
       ws.subscribe(TOPIC_ADMIN);
@@ -109,13 +110,22 @@ app.ws("/*", {
       const parsedData = JSON.parse(data);
       switch (parsedData.type) {
         case "ping":
-          ws.send("pong");
+          ws.send(JSON.stringify({ type: "pong" }));
           break;
         case "reset":
           app.publish(
             TOPIC_USERS,
             JSON.stringify({
               type: "reset",
+            })
+          );
+          break;
+        case "pick_number":
+          app.publish(
+            TOPIC_USERS,
+            JSON.stringify({
+              type: "pick_number",
+              data: parsedData.data,
             })
           );
           break;
